@@ -142,8 +142,8 @@ function App() {
   };
 
   return (
-    <div className="flex justify-center items-center min-h-screen bg-gray-900">
-      <div className="flex justify-center items-center m-10 flex-col lg:w-3/12">
+    <div className="flex justify-center min-h-screen bg-gray-900">
+      <div className="flex m-10 flex-col lg:w-3/12">
         {user ? (
           <>
             <div className="w-full mb-6 flex justify-between items-center">
