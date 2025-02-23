@@ -55,14 +55,14 @@ function ListManager() {
           <div className="flex flex-col max-w-56">
             <h1 className="text-xl font-bold text-white">Create New List</h1>
             <div className="mt-4 text-center">
-              <p className="text-gray-400 text-xs hover:text-gray-300 transition-colors">
+              <p className="text-gray-400 text-xs hover:text-gray-300 transition-colors mr-5">
                 Lists are online & synchronized in real-time! Share the list
                 name with your friends or your partner to collaborate together.
               </p>
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 mr-3">
             <img
               src={user.photoURL}
               className="w-8 h-8 rounded-full object-cover"
