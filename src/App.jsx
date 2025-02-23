@@ -115,16 +115,18 @@ function App() {
 
   const GroceryCard = ({ item }) => (
     <div className="flex justify-between items-center w-full mb-3">
-      <span className="ml-6 font-semibold text-white">{item.itemName}</span>
-      <div className="flex items-center">
+      <span className="ml-2 md:ml-6 font-semibold text-white text-sm md:text-base truncate">
+        {item.itemName}
+      </span>
+      <div className="flex items-center gap-2">
         <img
-          className="w-20 h-20 object-cover rounded-xl"
+          className="w-16 h-16 md:w-20 md:h-20 object-cover rounded-xl"
           src={item.imageUrl}
           alt={item.itemName}
           onError={(e) => (e.target.src = "https://via.placeholder.com/150")}
         />
         <img
-          className="w-8 h-8 ml-2 cursor-pointer"
+          className="w-6 h-6 md:w-8 md:h-8 cursor-pointer"
           src={MinusCartIcon}
           alt="Remove"
           onClick={() => onHandleRemoveItem(item.id)}
@@ -142,40 +144,47 @@ function App() {
   };
 
   return (
-    <div className="flex justify-center min-h-screen bg-gray-900">
-      <div className="flex m-10 flex-col lg:w-3/12">
+    <div className="flex justify-center min-h-screen bg-gray-900 px-4">
+      <div className="w-full md:w-10/12 lg:w-8/12 xl:w-6/12 max-w-2xl py-6">
         {user ? (
           <>
-            <div className="w-full mb-6 flex justify-between items-center">
-              <div className="text-white">
-                Welcome, {user.displayName || "User"}!
+            <div className="w-full mb-4 md:mb-6 flex justify-between items-center gap-2">
+              <div className="text-white text-sm md:text-base truncate text-wrap">
+                Happy groceries, {user.displayName || "User"}!
               </div>
-              <button
-                onClick={logout}
-                className="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded-xl text-sm"
-              >
-                Logout
-              </button>
+
+              <div className="flex justify-center items-center">
+                <img
+                  src={user.photoURL}
+                  className="w-6 h-6 object-contain mr-1.5 rounded-lg"
+                />
+                <button
+                  onClick={logout}
+                  className="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-3 md:py-2 md:px-4 rounded-xl text-xs md:text-sm whitespace-nowrap"
+                >
+                  Logout
+                </button>
+              </div>
             </div>
 
-            <div className="flex mb-10 w-full">
-              <form className="flex flex-1" onSubmit={onHandleSearch}>
+            <div className="flex flex-col md:flex-row gap-2 mb-6 md:mb-10 w-full">
+              <form className="flex flex-1 gap-2" onSubmit={onHandleSearch}>
                 <input
                   placeholder="Add groceries..."
                   onChange={(e) => setImageSearch(e.target.value)}
                   value={imageSearch}
-                  className="text-black bg-white rounded-full outline-none pl-6 pr-4 py-2 flex-1"
+                  className="text-black bg-white rounded-full outline-none pl-4 md:pl-6 pr-2 py-3 flex-1 text-sm md:text-base"
                   autoFocus
                 />
                 <button
                   type="submit"
-                  className="bg-green-500 ml-2 hover:bg-green-600 text-white font-bold py-2 px-4 rounded-xl text-sm"
+                  className="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded-xl text-sm md:text-base whitespace-nowrap"
                 >
                   Add
                 </button>
               </form>
               <button
-                className="bg-green-500 ml-2 hover:bg-green-600 text-white font-bold py-2 px-4 rounded-xl text-sm"
+                className="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded-xl text-sm md:text-base"
                 onClick={onHandleClearList}
                 disabled={!groceryItems.length}
               >
@@ -189,7 +198,7 @@ function App() {
                   <GroceryCard item={item} key={item.id} />
                 ))
               ) : (
-                <p className="text-white text-center">
+                <p className="text-white text-center text-sm md:text-base">
                   Your grocery list is empty
                 </p>
               )}
@@ -197,18 +206,18 @@ function App() {
           </>
         ) : (
           <div className="flex justify-center items-center h-svh">
-            <div className="flex flex-col justify-center items-center text-center p-8 rounded-lg bg-gray-800">
-              <h1 className="text-2xl text-white mb-4">Grocery List App</h1>
+            <div className="flex flex-col justify-center items-center text-center p-4 md:p-8 rounded-lg bg-gray-800 w-full max-w-md">
+              <h1 className="text-xl md:text-2xl text-white mb-4">
+                Grocery List App
+              </h1>
               <button
                 onClick={signInWithGoogle}
-                className="bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-6 rounded-xl text-lg flex items-center justify-center gap-2"
+                className="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 md:py-3 md:px-6 rounded-xl text-base md:text-lg flex items-center justify-center gap-2 w-full"
               >
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
-                  width="24"
-                  height="24"
+                  className="w-5 h-5 md:w-6 md:h-6 fill-current"
                   viewBox="0 0 24 24"
-                  className="fill-current"
                 >
                   <path d="M12.24 10.285V14.4h6.806c-.275 1.765-2.056 5.174-6.806 5.174-4.095 0-7.439-3.389-7.439-7.574s3.345-7.574 7.439-7.574c2.33 0 3.891.989 4.785 1.849l3.254-3.138C18.189 1.186 15.479 0 12.24 0c-6.635 0-12 5.365-12 12s5.365 12 12 12c6.926 0 11.52-4.869 11.52-11.726 0-.788-.085-1.39-.189-1.989H12.24z" />
                 </svg>
