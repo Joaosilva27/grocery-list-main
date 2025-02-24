@@ -17,6 +17,7 @@ import {
   arrayUnion,
   getDocs,
   where,
+  writeBatch,
 } from "firebase/firestore";
 
 function ListPage() {
@@ -130,6 +131,24 @@ function ListPage() {
     }
   };
 
+  const handleClearList = async () => {
+    if (!listId) return;
+
+    try {
+      const itemsRef = collection(db, "lists", listId, "items");
+      const snapshot = await getDocs(itemsRef);
+      const batch = writeBatch(db);
+
+      snapshot.docs.forEach((doc) => {
+        batch.delete(doc.ref);
+      });
+
+      await batch.commit();
+    } catch (error) {
+      console.error("Clear list error:", error.message);
+    }
+  };
+
   const GroceryCard = ({ item }) => (
     <div className="flex justify-between items-center w-full mb-3">
       <span className="ml-2 md:ml-6 font-semibold text-white text-sm md:text-base truncate">
@@ -166,7 +185,6 @@ function ListPage() {
         <div className="w-full mb-4 md:mb-6 grid grid-cols-[1fr_auto] items-center gap-2">
           <div className="min-w-0">
             <div className="text-white text-sm md:text-base truncate">
-              You are now adding items to{" "}
               <span className="truncate">{listName.replace(/-/g, " ")}</span>{" "}
               list.
             </div>
@@ -176,12 +194,20 @@ function ListPage() {
               </div>
             )}
           </div>
-          <button
-            onClick={() => navigate("/")}
-            className="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-3 md:py-2 md:px-4 rounded-xl text-xs md:text-sm whitespace-nowrap"
-          >
-            Go Back
-          </button>
+          <div className="flex gap-2">
+            <button
+              onClick={handleClearList}
+              className="bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-3 md:py-2 md:px-4 rounded-xl text-xs md:text-sm whitespace-nowrap"
+            >
+              Clear List
+            </button>
+            <button
+              onClick={() => navigate("/")}
+              className="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-3 md:py-2 md:px-4 rounded-xl text-xs md:text-sm whitespace-nowrap"
+            >
+              Go Back
+            </button>
+          </div>
         </div>
 
         <div className="flex flex-col md:flex-row gap-2 mb-6 md:mb-10 w-full">
