@@ -33,34 +33,19 @@ function ListPage() {
   useEffect(() => {
     if (!user || !listName) return;
 
-    const listRef = collection(db, "lists"); // Reference the "lists" collection
-    const listDoc = doc(listRef, listName); // Use listName as the document ID (normalizedName)
+    const itemsRef = collection(db, "lists", listName, "items");
+    const q = query(itemsRef, orderBy("createdAt", "desc"));
 
-    // Check if the list exists
-    const fetchList = async () => {
-      const docSnap = await getDoc(listDoc); // Get the document
-      if (docSnap.exists()) {
-        const listId = docSnap.id;
-        // Now use the listId to fetch items related to this list
-        const itemsRef = collection(db, "lists", listId, "items"); // Use listId here
-        const q = query(itemsRef, orderBy("createdAt", "desc"));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      setGroceryItems(
+        snapshot.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+        }))
+      );
+    });
 
-        const unsubscribe = onSnapshot(q, (snapshot) => {
-          setGroceryItems(
-            snapshot.docs.map((doc) => ({
-              id: doc.id,
-              ...doc.data(),
-            }))
-          );
-        });
-
-        return () => unsubscribe();
-      } else {
-        console.log("List not found!");
-      }
-    };
-
-    fetchList();
+    return () => unsubscribe();
   }, [listName, user]);
 
   const onHandleSearch = async (e) => {
