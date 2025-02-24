@@ -10,6 +10,8 @@ import {
   getDocs,
   addDoc,
   serverTimestamp,
+  doc,
+  setDoc,
 } from "firebase/firestore";
 
 function ListManager() {
@@ -19,20 +21,32 @@ function ListManager() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    const unsubscribe = auth.onAuthStateChanged(setUser);
+    const unsubscribe = auth.onAuthStateChanged(async (user) => {
+      if (user) {
+        const userRef = doc(db, "users", user.uid);
+        await setDoc(
+          userRef,
+          {
+            displayName: user.displayName,
+            email: user.email,
+            lastLogin: serverTimestamp(),
+          },
+          { merge: true }
+        );
+      }
+      setUser(user);
+    });
+
     const savedLists = JSON.parse(localStorage.getItem("visitedLists")) || [];
     setVisitedLists(savedLists);
+
     return () => unsubscribe();
   }, []);
 
-  useEffect(() => {
-    localStorage.setItem("visitedLists", JSON.stringify(visitedLists));
-  }, [visitedLists]);
-
   const handleListAccess = async (e) => {
     e.preventDefault();
-    const normalized = listName.toLowerCase().replace(/\s+/g, "-");
     const displayName = listName.trim();
+    const normalized = displayName.toLowerCase().replace(/\s+/g, "-");
 
     try {
       const listsRef = collection(db, "lists");
@@ -47,14 +61,18 @@ function ListManager() {
         });
       }
 
-      setVisitedLists((prev) => [
+      const newVisited = [
         ...new Map(
-          [...prev, { displayName, normalized }].map((item) => [
+          [...visitedLists, { displayName, normalized }].map((item) => [
             item.normalized,
             item,
           ])
         ).values(),
-      ]);
+      ];
+
+      // Update both state and localStorage synchronously
+      setVisitedLists(newVisited);
+      localStorage.setItem("visitedLists", JSON.stringify(newVisited));
 
       navigate(`/list/${normalized}`);
     } catch (error) {
@@ -63,9 +81,11 @@ function ListManager() {
   };
 
   const removeVisitedList = (normalized) => {
-    setVisitedLists((prev) =>
-      prev.filter((list) => list.normalized !== normalized)
+    const newVisited = visitedLists.filter(
+      (list) => list.normalized !== normalized
     );
+    setVisitedLists(newVisited);
+    localStorage.setItem("visitedLists", JSON.stringify(newVisited));
   };
 
   if (!user) {
@@ -145,7 +165,9 @@ function ListManager() {
 
         {visitedLists.length > 0 && (
           <div className="mt-8">
-            <h2 className="text-white mb-4">Visited Lists</h2>
+            <h2 className="text-white mb-4 text-lg font-semibold">
+              Recently Viewed Lists
+            </h2>
             <div className="space-y-2">
               {visitedLists.map((list) => (
                 <div
@@ -154,13 +176,13 @@ function ListManager() {
                 >
                   <button
                     onClick={() => navigate(`/list/${list.normalized}`)}
-                    className="text-white hover:text-green-500 truncate"
+                    className="text-white hover:text-green-500 truncate text-left flex-1"
                   >
                     {list.displayName}
                   </button>
                   <button
                     onClick={() => removeVisitedList(list.normalized)}
-                    className="text-red-500 hover:text-red-600 text-xl"
+                    className="text-red-500 hover:text-red-600 text-xl ml-2"
                   >
                     ×
                   </button>

@@ -11,11 +11,12 @@ import {
   onSnapshot,
   deleteDoc,
   doc,
-  where,
   orderBy,
   serverTimestamp,
   updateDoc,
   arrayUnion,
+  getDocs,
+  where,
 } from "firebase/firestore";
 
 function ListPage() {
@@ -24,7 +25,7 @@ function ListPage() {
   const [imageSearch, setImageSearch] = useState("");
   const [groceryItems, setGroceryItems] = useState([]);
   const [user, setUser] = useState(null);
-  const [members, setMembers] = useState([]);
+  const [memberNames, setMemberNames] = useState([]);
   const [listId, setListId] = useState(null);
 
   useEffect(() => {
@@ -54,7 +55,12 @@ function ListPage() {
         }
 
         setListId(listDoc.id);
-        setMembers(listData.members || []);
+
+        const usersRef = collection(db, "users");
+        const userQuery = query(usersRef, where("uid", "in", listData.members));
+        const userSnapshot = await getDocs(userQuery);
+        const names = userSnapshot.docs.map((doc) => doc.data().displayName);
+        setMemberNames(names);
       } else {
         navigate("/");
       }
@@ -162,9 +168,9 @@ function ListPage() {
             <div className="text-white text-sm md:text-base truncate">
               You are now adding items to {listName.replace(/-/g, " ")} list.
             </div>
-            {members.length > 0 && (
+            {memberNames.length > 0 && (
               <div className="text-gray-400 text-xs mt-1">
-                Members: {members.length}
+                Members: {memberNames.join(", ")}
               </div>
             )}
           </div>
