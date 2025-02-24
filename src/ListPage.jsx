@@ -11,8 +11,11 @@ import {
   onSnapshot,
   deleteDoc,
   doc,
+  where,
   orderBy,
   serverTimestamp,
+  updateDoc,
+  arrayUnion,
 } from "firebase/firestore";
 
 function ListPage() {
@@ -21,6 +24,8 @@ function ListPage() {
   const [imageSearch, setImageSearch] = useState("");
   const [groceryItems, setGroceryItems] = useState([]);
   const [user, setUser] = useState(null);
+  const [members, setMembers] = useState([]);
+  const [listId, setListId] = useState(null);
 
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged((user) => {
@@ -33,10 +38,38 @@ function ListPage() {
   useEffect(() => {
     if (!user || !listName) return;
 
-    const itemsRef = collection(db, "lists", listName, "items");
+    const decodedListName = listName.replace(/-/g, " ");
+    const listsRef = collection(db, "lists");
+    const listQuery = query(listsRef, where("name", "==", decodedListName));
+
+    const unsubscribeList = onSnapshot(listQuery, async (snapshot) => {
+      if (!snapshot.empty) {
+        const listDoc = snapshot.docs[0];
+        const listData = listDoc.data();
+
+        if (!listData.members.includes(user.uid)) {
+          await updateDoc(doc(db, "lists", listDoc.id), {
+            members: arrayUnion(user.uid),
+          });
+        }
+
+        setListId(listDoc.id);
+        setMembers(listData.members || []);
+      } else {
+        navigate("/");
+      }
+    });
+
+    return () => unsubscribeList();
+  }, [listName, user, navigate]);
+
+  useEffect(() => {
+    if (!user || !listId) return;
+
+    const itemsRef = collection(db, "lists", listId, "items");
     const q = query(itemsRef, orderBy("createdAt", "desc"));
 
-    const unsubscribe = onSnapshot(q, (snapshot) => {
+    const unsubscribeItems = onSnapshot(q, (snapshot) => {
       setGroceryItems(
         snapshot.docs.map((doc) => ({
           id: doc.id,
@@ -45,12 +78,12 @@ function ListPage() {
       );
     });
 
-    return () => unsubscribe();
-  }, [listName, user]);
+    return () => unsubscribeItems();
+  }, [listId, user]);
 
   const onHandleSearch = async (e) => {
     e.preventDefault();
-    if (!imageSearch.trim()) return;
+    if (!imageSearch.trim() || !listId) return;
 
     try {
       const { data } = await axios.post(
@@ -68,7 +101,7 @@ function ListPage() {
       );
 
       if (data.images?.length) {
-        await addDoc(collection(db, "lists", listName, "items"), {
+        await addDoc(collection(db, "lists", listId, "items"), {
           itemName:
             imageSearch[0].toUpperCase() + imageSearch.slice(1).toLowerCase(),
           imageUrl: data.images[0].imageUrl,
@@ -83,8 +116,9 @@ function ListPage() {
   };
 
   const onHandleRemoveItem = async (itemId) => {
+    if (!listId) return;
     try {
-      await deleteDoc(doc(db, "lists", listName, "items", itemId));
+      await deleteDoc(doc(db, "lists", listId, "items", itemId));
     } catch (error) {
       console.error("Delete error:", error.message);
     }
@@ -124,8 +158,15 @@ function ListPage() {
     <div className="flex justify-center min-h-screen bg-gray-900 px-4">
       <div className="w-full md:w-10/12 lg:w-8/12 xl:w-6/12 max-w-2xl py-6">
         <div className="w-full mb-4 md:mb-6 flex justify-between items-center gap-2">
-          <div className="text-white text-sm md:text-base truncate">
-            You are now adding items to {listName.replace(/-/g, " ")} list.
+          <div>
+            <div className="text-white text-sm md:text-base truncate">
+              You are now adding items to {listName.replace(/-/g, " ")} list.
+            </div>
+            {members.length > 0 && (
+              <div className="text-gray-400 text-xs mt-1">
+                Members: {members.length}
+              </div>
+            )}
           </div>
           <button
             onClick={() => navigate("/")}

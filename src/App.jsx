@@ -1,23 +1,71 @@
 import { useEffect, useState } from "react";
 import { Routes, Route, useNavigate } from "react-router-dom";
 import ListPage from "./ListPage";
-import { auth } from "./firebase";
+import { auth, db } from "./firebase";
 import { signInWithGoogle, logout } from "./Auth";
+import {
+  collection,
+  query,
+  where,
+  getDocs,
+  addDoc,
+  serverTimestamp,
+} from "firebase/firestore";
 
 function ListManager() {
   const [user, setUser] = useState(null);
   const [listName, setListName] = useState("");
+  const [visitedLists, setVisitedLists] = useState([]);
   const navigate = useNavigate();
 
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged(setUser);
+    const savedLists = JSON.parse(localStorage.getItem("visitedLists")) || [];
+    setVisitedLists(savedLists);
     return () => unsubscribe();
   }, []);
 
-  const handleListAccess = (e) => {
+  useEffect(() => {
+    localStorage.setItem("visitedLists", JSON.stringify(visitedLists));
+  }, [visitedLists]);
+
+  const handleListAccess = async (e) => {
     e.preventDefault();
     const normalized = listName.toLowerCase().replace(/\s+/g, "-");
-    navigate(`/list/${normalized}`);
+    const displayName = listName.trim();
+
+    try {
+      const listsRef = collection(db, "lists");
+      const q = query(listsRef, where("name", "==", displayName));
+      const snapshot = await getDocs(q);
+
+      if (snapshot.empty) {
+        await addDoc(listsRef, {
+          name: displayName,
+          members: [user.uid],
+          createdAt: serverTimestamp(),
+        });
+      }
+
+      setVisitedLists((prev) => [
+        ...new Map(
+          [...prev, { displayName, normalized }].map((item) => [
+            item.normalized,
+            item,
+          ])
+        ).values(),
+      ]);
+
+      navigate(`/list/${normalized}`);
+    } catch (error) {
+      console.error("Error accessing list:", error);
+    }
+  };
+
+  const removeVisitedList = (normalized) => {
+    setVisitedLists((prev) =>
+      prev.filter((list) => list.normalized !== normalized)
+    );
   };
 
   if (!user) {
@@ -53,7 +101,9 @@ function ListManager() {
       <div className="w-full max-w-md bg-gray-800 rounded-xl p-8">
         <div className="flex items-center justify-between mb-8">
           <div className="flex flex-col max-w-56">
-            <h1 className="text-xl font-bold text-white">Create New List</h1>
+            <h1 className="text-xl font-bold text-white">
+              Create or View Lists
+            </h1>
             <div className="mt-4 text-center">
               <p className="text-gray-400 text-xs hover:text-gray-300 transition-colors mr-5">
                 Lists are online & synchronized in real-time! Share the list
@@ -89,9 +139,36 @@ function ListManager() {
             type="submit"
             className="w-full bg-green-500 hover:bg-green-600 text-white font-semibold py-2 px-4 rounded-lg transition-colors"
           >
-            Create List
+            Go to the List
           </button>
         </form>
+
+        {visitedLists.length > 0 && (
+          <div className="mt-8">
+            <h2 className="text-white mb-4">Visited Lists</h2>
+            <div className="space-y-2">
+              {visitedLists.map((list) => (
+                <div
+                  key={list.normalized}
+                  className="flex justify-between items-center bg-gray-700 p-3 rounded-lg"
+                >
+                  <button
+                    onClick={() => navigate(`/list/${list.normalized}`)}
+                    className="text-white hover:text-green-500 truncate"
+                  >
+                    {list.displayName}
+                  </button>
+                  <button
+                    onClick={() => removeVisitedList(list.normalized)}
+                    className="text-red-500 hover:text-red-600 text-xl"
+                  >
+                    ×
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
