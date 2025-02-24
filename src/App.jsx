@@ -1,23 +1,72 @@
 import { useEffect, useState } from "react";
-import { Routes, Route, useNavigate } from "react-router-dom";
-import ListPage from "./ListPage";
-import { auth } from "./firebase";
+import { Link, useNavigate } from "react-router-dom";
+import { auth, db } from "./firebase";
 import { signInWithGoogle, logout } from "./Auth";
+import {
+  collection,
+  addDoc,
+  query,
+  where,
+  onSnapshot,
+  updateDoc,
+  arrayRemove,
+  serverTimestamp,
+} from "firebase/firestore";
 
-function ListManager() {
+export default function ListManager() {
   const [user, setUser] = useState(null);
   const [listName, setListName] = useState("");
+  const [userLists, setUserLists] = useState([]);
   const navigate = useNavigate();
 
   useEffect(() => {
-    const unsubscribe = auth.onAuthStateChanged(setUser);
+    const unsubscribe = auth.onAuthStateChanged((user) => {
+      setUser(user);
+      if (user) {
+        const q = query(
+          collection(db, "lists"),
+          where("members", "array-contains", user.uid)
+        );
+
+        const unsubscribeLists = onSnapshot(q, (snapshot) => {
+          setUserLists(
+            snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }))
+          );
+        });
+
+        return () => unsubscribeLists();
+      }
+    });
     return () => unsubscribe();
   }, []);
 
-  const handleListAccess = (e) => {
+  const handleListAccess = async (e) => {
     e.preventDefault();
-    const normalized = listName.toLowerCase().replace(/\s+/g, "-");
-    navigate(`/list/${normalized}`);
+    if (!listName.trim()) return;
+
+    try {
+      const normalized = listName.toLowerCase().replace(/\s+/g, "-");
+      const listRef = await addDoc(collection(db, "lists"), {
+        name: listName,
+        normalizedName: normalized,
+        ownerId: user.uid,
+        members: [user.uid],
+        createdAt: serverTimestamp(),
+      });
+      navigate(`/list/${normalized}`);
+    } catch (error) {
+      console.error("Error creating list:", error);
+    }
+  };
+
+  const handleRemoveList = async (listId) => {
+    try {
+      await updateDoc(doc(db, "lists", listId), {
+        members: arrayRemove(user.uid),
+      });
+    } catch (error) {
+      console.error("Error removing list:", error);
+    }
   };
 
   if (!user) {
@@ -52,17 +101,7 @@ function ListManager() {
     <div className="flex justify-center items-center min-h-screen bg-gray-900 px-4">
       <div className="w-full max-w-md bg-gray-800 rounded-xl p-8">
         <div className="flex items-center justify-between mb-8">
-          <div className="flex flex-col max-w-56">
-            <h1 className="text-xl font-bold text-white">Create New List</h1>
-            <div className="mt-4 text-center">
-              <p className="text-gray-400 text-xs hover:text-gray-300 transition-colors mr-5">
-                Lists are online & synchronized in real-time! Share the list
-                name with your friends or your partner to collaborate together.
-              </p>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-2 mr-3">
+          <div className="flex items-center gap-2">
             <img
               src={user.photoURL}
               className="w-8 h-8 rounded-full object-cover"
@@ -77,33 +116,58 @@ function ListManager() {
           </div>
         </div>
 
-        <form onSubmit={handleListAccess} className="space-y-4">
+        <form onSubmit={handleListAccess} className="space-y-4 mb-6">
           <input
             type="text"
             value={listName}
             onChange={(e) => setListName(e.target.value)}
-            placeholder="Enter list name"
+            placeholder="New list name"
             className="w-full px-4 py-2 bg-gray-700 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
           />
           <button
             type="submit"
             className="w-full bg-green-500 hover:bg-green-600 text-white font-semibold py-2 px-4 rounded-lg transition-colors"
           >
-            Create List
+            Create New List
           </button>
         </form>
+
+        <div className="space-y-3">
+          {userLists && (
+            <h1 className="text-xl font-bold text-white">Your Grocery Lists</h1>
+          )}
+          {userLists.map((list) => (
+            <div
+              key={list.id}
+              className="flex items-center justify-between bg-gray-700 p-4 rounded-lg"
+            >
+              <Link
+                to={`/list/${list.normalizedName}`}
+                className="text-white hover:text-green-400 transition-colors flex-1"
+              >
+                {list.name}
+              </Link>
+              <button
+                onClick={() => handleRemoveList(list.id)}
+                className="text-red-400 hover:text-red-300 transition-colors ml-2"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="h-5 w-5"
+                  viewBox="0 0 20 20"
+                  fill="currentColor"
+                >
+                  <path
+                    fillRule="evenodd"
+                    d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z"
+                    clipRule="evenodd"
+                  />
+                </svg>
+              </button>
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   );
 }
-
-function App() {
-  return (
-    <Routes>
-      <Route path="/list/:listName" element={<ListPage />} />
-      <Route path="/" element={<ListManager />} />
-    </Routes>
-  );
-}
-
-export default App;
