@@ -166,7 +166,7 @@ function ListManager() {
         {visitedLists.length > 0 && (
           <div className="mt-8">
             <h2 className="text-white mb-4 text-lg font-semibold">
-              Recently Viewed Lists
+              Your Lists
             </h2>
             <div className="space-y-2">
               {visitedLists.map((list) => (

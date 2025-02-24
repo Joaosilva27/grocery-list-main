@@ -163,10 +163,12 @@ function ListPage() {
   return (
     <div className="flex justify-center min-h-screen bg-gray-900 px-4">
       <div className="w-full md:w-10/12 lg:w-8/12 xl:w-6/12 max-w-2xl py-6">
-        <div className="w-full mb-4 md:mb-6 flex justify-between items-center gap-2">
-          <div>
+        <div className="w-full mb-4 md:mb-6 grid grid-cols-[1fr_auto] items-center gap-2">
+          <div className="min-w-0">
             <div className="text-white text-sm md:text-base truncate">
-              You are now adding items to {listName.replace(/-/g, " ")} list.
+              You are now adding items to{" "}
+              <span className="truncate">{listName.replace(/-/g, " ")}</span>{" "}
+              list.
             </div>
             {memberNames.length > 0 && (
               <div className="text-gray-400 text-xs mt-1">
@@ -178,7 +180,7 @@ function ListPage() {
             onClick={() => navigate("/")}
             className="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-3 md:py-2 md:px-4 rounded-xl text-xs md:text-sm whitespace-nowrap"
           >
-            Back to Home
+            Go Back
           </button>
         </div>
 
